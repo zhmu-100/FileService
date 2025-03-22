@@ -11,8 +11,7 @@ package org.fileservice.connection
  * - [apiHost]: хост, на котором будет запущено REST API.
  * - [apiPort]: порт, на котором будет запущено REST API.
  *
- * Метод [load] загружает конфигурацию из переменных окружения с помощью библиотеки dotenv. Если
- * какая-либо переменная не задана, используется значение по умолчанию.
+ * Метод [load] загружает конфигурацию из env.
  */
 data class MinioConfig(
     val minioEndpoint: String,
@@ -26,7 +25,6 @@ data class MinioConfig(
     /**
      * Загружает конфигурацию из переменных окружения.
      *
-     * Использует библиотеку [io.github.cdimascio.dotenv.Dotenv] для получения значений:
      * - MINIO_ENDPOINT (по умолчанию: "http://127.0.0.1:9000")
      * - MINIO_ACCESS_KEY (по умолчанию: пустая строка)
      * - MINIO_SECRET_KEY (по умолчанию: пустая строка)

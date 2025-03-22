@@ -5,9 +5,7 @@ import io.minio.MinioClient
 /**
  * Менеджер клиента MinIO.
  *
- * Объект [MinioClientManager] инициализирует синглтон-клиент [MinioClient] с использованием
- * параметров, полученных из [MinioConfig.load()]. Этот клиент используется для выполнения операций
- * с MinIO, таких, как загрузка файлов, получение объектов и генерация временных URL.
+ * Объект [MinioClientManager] инициализирует клиент [MinioClient] с использованием параметров env.
  */
 object MinioClientManager {
   private val config = MinioConfig.load()

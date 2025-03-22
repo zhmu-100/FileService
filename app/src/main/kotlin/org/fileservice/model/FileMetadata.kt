@@ -3,7 +3,7 @@ package org.fileservice.model
 import kotlinx.serialization.Serializable
 
 /**
- * Метаданные файла, сохраняемого в хранилище.
+ * Метаданные файла, сохраняемого в бакет.
  *
  * @property user_id Идентификатор пользователя.
  * @property private Флаг приватности файла.
@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
  * @property file_name Оригинальное имя файла.
  * @property size Размер файла в байтах.
  * @property temp Флаг, указывающий, является ли файл временным.
- * @property folder Папка в хранилище, куда сохранён файл.
+ * @property folder Папка в бакете, куда сохранён файл.
  */
 @Serializable
 data class FileMetadata(
