@@ -66,7 +66,7 @@ tasks.check {
 }
 
 application {
-    mainClass.set("org.clickhouse.api.ApiServerKt")
+    mainClass.set("org.fileservice.ApiServerKt")
 }
 
 kotlin {
