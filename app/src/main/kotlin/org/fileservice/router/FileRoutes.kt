@@ -106,13 +106,25 @@ fun Application.registerFileRoutes() {
       get("{id...}") {
         val idParts = call.parameters.getAll("id")
         val fileId = idParts?.joinToString("/") ?: throw BadRequestException("Missing file id")
+
         val (metadata, content) = fileService.getFile(fileId)
-        call.response.headers.append(
+
+        call.response.header("X-Meta-File-Name", metadata.file_name)
+        call.response.header("X-Meta-Folder", metadata.folder ?: "")
+        call.response.header("X-Meta-Mime-Type", metadata.mime_type)
+        call.response.header("X-Meta-Private", metadata.private.toString())
+        call.response.header("X-Meta-Size", metadata.size.toString())
+        metadata.temp?.let { call.response.header("X-Meta-Temp", it.toString()) }
+        metadata.user_id?.let { call.response.header("X-Meta-User-Id", it) }
+
+        call.response.header(
           HttpHeaders.ContentDisposition,
           "attachment; filename=\"${metadata.file_name}\""
         )
+
         call.respondBytes(content, ContentType.parse(metadata.mime_type))
       }
+
 
 
       get("/url/{id...}") {

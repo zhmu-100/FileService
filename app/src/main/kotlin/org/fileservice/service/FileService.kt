@@ -97,21 +97,37 @@ class FileService : IFileService {
 
   override suspend fun getFile(fileId: String): Pair<FileMetadata, ByteArray> {
     return withContext(Dispatchers.IO) {
-      val inputStream = client.getObject(
+      val obj = client.getObject(
         GetObjectArgs.builder()
           .bucket(bucketName)
           .`object`(fileId)
           .build()
       )
-      val bytes = inputStream.readBytes()
-      inputStream.close()
-      val metadata = FileMetadata(
-        user_id = null,
-        private = false,
-        mime_type = "application/octet-stream",
-        file_name = fileId,
-        size = bytes.size.toLong()
+
+      val bytes = obj.readBytes()
+      obj.close()
+
+      val stat = client.statObject(
+        StatObjectArgs.builder()
+          .bucket(bucketName)
+          .`object`(fileId)
+          .build()
       )
+
+      val headers = stat.headers().toMultimap()
+        .filterKeys { it.lowercase().startsWith("x-amz-meta-") }
+        .mapKeys { it.key.lowercase() }
+
+      val metadata = FileMetadata(
+        user_id = headers["x-amz-meta-user_id"]?.firstOrNull(),
+        private = headers["x-amz-meta-private"]?.firstOrNull()?.toBoolean() ?: false,
+        mime_type = headers["x-amz-meta-mime_type"]?.firstOrNull() ?: "application/octet-stream",
+        file_name = headers["x-amz-meta-file_name"]?.firstOrNull() ?: fileId,
+        size = headers["x-amz-meta-size"]?.firstOrNull()?.toLongOrNull() ?: bytes.size.toLong(),
+        temp = headers["x-amz-meta-temp"]?.firstOrNull()?.toBoolean(),
+        folder = headers["x-amz-meta-folder"]?.firstOrNull()
+      )
+
       Pair(metadata, bytes)
     }
   }
