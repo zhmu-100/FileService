@@ -5,6 +5,7 @@ plugins {
   application
   id("com.ncorti.ktfmt.gradle") version "0.11.0"
   jacoco
+  id("org.jetbrains.dokka") version "1.9.20"
 }
 
 group = "org.clickhouse"
