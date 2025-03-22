@@ -10,6 +10,5 @@ data class FileMetadata(
   val file_name: String,
   val size: Long,
   val temp: Boolean? = null,
-  val ecosystem: String? = null,
   val folder: String? = null
 )

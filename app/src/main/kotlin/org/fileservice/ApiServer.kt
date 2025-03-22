@@ -5,8 +5,8 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
-import org.minio.connection.MinioConfig
-import org.minio.route.registerFileRoutes
+import org.fileservice.connection.MinioConfig
+import org.fileservice.router.registerFileRoutes
 
 fun main() {
   val config = MinioConfig.load()

@@ -1,7 +1,7 @@
 package org.fileservice.connection
 
 import io.minio.MinioClient
-import org.minio.connection.MinioConfig
+import org.fileservice.connection.MinioConfig
 
 object MinioClientManager {
   private val config = MinioConfig.load()

@@ -4,6 +4,7 @@ import io.minio.GetObjectArgs
 import io.minio.GetPresignedObjectUrlArgs
 import io.minio.MinioClient
 import io.minio.PutObjectArgs
+import io.minio.StatObjectArgs
 import io.minio.http.Method
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,7 +13,7 @@ import org.fileservice.model.FileMetadata
 import org.fileservice.model.FixFileMetadata
 import org.fileservice.model.GetFileUrlResponse
 import org.fileservice.model.UploadResponse
-import org.minio.connection.MinioConfig
+import org.fileservice.connection.MinioConfig
 import java.io.ByteArrayInputStream
 import java.util.UUID
 
@@ -24,7 +25,11 @@ class FileService : IFileService {
   override suspend fun upload(metadata: FileMetadata, file: ByteArray): UploadResponse {
     return withContext(Dispatchers.IO) {
       val fileId = UUID.randomUUID().toString()
-      val objectName = fileId
+      val objectName = if (!metadata.folder.isNullOrBlank()) {
+        "${metadata.folder}/$fileId"
+      } else {
+        fileId
+      }
       val inputStream = ByteArrayInputStream(file)
 
       client.putObject(
@@ -33,67 +38,108 @@ class FileService : IFileService {
           .`object`(objectName)
           .stream(inputStream, file.size.toLong(), -1)
           .contentType(metadata.mime_type)
+          .headers(buildMetadataHeaders(metadata))
           .build()
       )
-      UploadResponse(id = fileId)
+      inputStream.close()
+      UploadResponse(id = objectName)
     }
   }
 
   override suspend fun fixUpload(fixMetadata: FixFileMetadata, file: ByteArray?): UploadResponse {
     return withContext(Dispatchers.IO) {
       val objectName = fixMetadata.file_id
-      if (file != null) {
-        val inputStream = ByteArrayInputStream(file)
 
-        client.putObject(
-          PutObjectArgs.builder()
+      val newFileBytes: ByteArray = if (file == null) {
+        val inputStream = client.getObject(
+          GetObjectArgs.builder()
             .bucket(bucketName)
             .`object`(objectName)
-            .stream(inputStream, file.size.toLong(), -1)
-            .contentType(fixMetadata.mime_type)
             .build()
         )
+        val bytes = inputStream.readBytes()
+        inputStream.close()
+        bytes
+      } else {
+        file
       }
-      UploadResponse(id = objectName)
-    }
-  }
 
-  override suspend fun getFile(fileId: String): Pair<FileMetadata, ByteArray> {
-    return withContext(Dispatchers.IO) {
-      val objectName = fileId
-
-      val inputStream = client.getObject(
-        GetObjectArgs.builder()
+      val statResponse = client.statObject(
+        StatObjectArgs.builder()
           .bucket(bucketName)
           .`object`(objectName)
           .build()
       )
+      val currentHeaders: Map<String, String> = statResponse.headers().toMultimap()
+        .filterKeys { it.lowercase().startsWith("x-amz-meta-") }
+        .mapValues { it.value.joinToString(",") }
+
+      val mergedHeaders = currentHeaders.toMutableMap()
+      mergedHeaders["x-amz-meta-file_name"] = fixMetadata.file_name
+      mergedHeaders["x-amz-meta-size"] = fixMetadata.size.toString()
+      mergedHeaders["x-amz-meta-mime_type"] = fixMetadata.mime_type
+
+      val inputStream = ByteArrayInputStream(newFileBytes)
+      client.putObject(
+        PutObjectArgs.builder()
+          .bucket(bucketName)
+          .`object`(objectName)
+          .stream(inputStream, newFileBytes.size.toLong(), -1)
+          .contentType(fixMetadata.mime_type)
+          .headers(mergedHeaders)
+          .build()
+      )
+      inputStream.close()
+      UploadResponse(id = objectName)
+    }
+  }
+
+
+  override suspend fun getFile(fileId: String): Pair<FileMetadata, ByteArray> {
+    return withContext(Dispatchers.IO) {
+      val inputStream = client.getObject(
+        GetObjectArgs.builder()
+          .bucket(bucketName)
+          .`object`(fileId)
+          .build()
+      )
       val bytes = inputStream.readBytes()
       inputStream.close()
-      val metadate = FileMetadata(
+      val metadata = FileMetadata(
         user_id = null,
         private = false,
         mime_type = "application/octet-stream",
-        file_name = objectName,
+        file_name = fileId,
         size = bytes.size.toLong()
       )
-      Pair(metadate, bytes)
+      Pair(metadata, bytes)
     }
   }
 
   override suspend fun getFileUrl(fileId: String): GetFileUrlResponse {
     return withContext(Dispatchers.IO) {
-      val objectName = fileId
-
       val url = client.getPresignedObjectUrl(
         GetPresignedObjectUrlArgs.builder()
           .method(Method.GET)
           .bucket(bucketName)
-          .`object`(objectName)
-          .expiry(60 * 60) // 60 seconds * 60 mins = 1 hour
+          .`object`(fileId)
+          .expiry(60 * 60) // 60 seconds * 60 minutes = 1 hour
           .build()
       )
       GetFileUrlResponse(url = url)
     }
   }
+
+  private fun buildMetadataHeaders(metadata: FileMetadata): Map<String, String> {
+    val headers = mutableMapOf<String, String>()
+    metadata.user_id?.let { headers["x-amz-meta-user_id"] = it }
+    headers["x-amz-meta-private"] = metadata.private.toString()
+    headers["x-amz-meta-file_name"] = metadata.file_name
+    headers["x-amz-meta-size"] = metadata.size.toString()
+    metadata.temp?.let { headers["x-amz-meta-temp"] = it.toString() }
+    metadata.folder?.let { headers["x-amz-meta-folder"] = it }
+    headers["x-amz-meta-mime_type"] = metadata.mime_type
+    return headers
+  }
+
 }
