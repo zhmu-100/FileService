@@ -20,25 +20,25 @@ import org.fileservice.service.IFileService
  *
  * Данный модуль определяет следующие эндпоинты:
  *
- * 1. POST /file/upload - загрузка нового файла.
+ * 1. POST /files/upload - загрузка нового файла.
  * ```
  *    Ожидается multipart-запрос, содержащий:
  *      - часть "meta": JSON, представляющий объект [FileMetadata]. Метаданные файла;
  *      - часть "file": сам файл в виде бинарных данных.
  * ```
- * 2. POST /file/fixupload - Замена файла.
+ * 2. POST /files/fixupload - Замена файла.
  * ```
  *    Ожидается multipart-запрос, содержащий:
  *      - часть "meta": JSON, представляющий объект [FixFileMetadata];
  *      - часть "file": новый файл.
  * ```
- * 3. GET /file/{id...} - получение файла по его идентификатору.
+ * 3. GET /files/{id...} - получение файла по его идентификатору.
  * ```
  *    Идентификатор может состоять из нескольких сегментов (например, "folder/id" для доступа к папкам).
  *    Ответ формируется с установкой кастомных HTTP-заголовков, содержащих метаданные,
  *    и отправкой содержимого файла.
  * ```
- * 4. GET /file/url/{id...} - получение временного URL для доступа к файлу.
+ * 4. GET /files/url/{id...} - получение временного URL для доступа к файлу.
  *
  * @receiver Application экземпляр Ktor-приложения.
  */
@@ -46,7 +46,7 @@ fun Application.registerFileRoutes() {
   val fileService: IFileService = FileService()
 
   routing {
-    route("/file") {
+    route("/files") {
       post("/upload") {
         val multipart = call.receiveMultipart()
         var metadata: FileMetadata? = null
