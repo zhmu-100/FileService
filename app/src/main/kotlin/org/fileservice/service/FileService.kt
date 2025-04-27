@@ -170,7 +170,7 @@ class FileService : IFileService {
   /**
    * Генерирует временный URL для доступа к файлу.
    *
-   * URL действителен в течение 1 часа.
+   * URL действителен в течение 7 дней.
    *
    * @param fileId Полный ключ объекта в ведре.
    * @return [GetFileUrlResponse] с временным URL.
@@ -183,7 +183,7 @@ class FileService : IFileService {
                   .method(Method.GET)
                   .bucket(bucketName)
                   .`object`(fileId)
-                  .expiry(60 * 60) // 60 seconds * 60 minutes = 1 hour
+                  .expiry(7 * 24 * 60 * 60) // 7 days
                   .build())
       GetFileUrlResponse(url = url)
     }
