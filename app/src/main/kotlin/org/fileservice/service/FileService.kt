@@ -56,14 +56,13 @@ class FileService : IFileService {
 
         // Логируем начало загрузки файла
         loggerClient.logActivity(
-          event = "Starting file upload to MinIO",
-          userId = metadata.user_id,
-          additionalData = mapOf(
-            "objectName" to objectName,
-            "fileSize" to file.size.toString(),
-            "mimeType" to metadata.mime_type
-          )
-        )
+            event = "Starting file upload to MinIO",
+            userId = metadata.user_id,
+            additionalData =
+                mapOf(
+                    "objectName" to objectName,
+                    "fileSize" to file.size.toString(),
+                    "mimeType" to metadata.mime_type))
 
         client.putObject(
             PutObjectArgs.builder()
@@ -74,27 +73,22 @@ class FileService : IFileService {
                 .headers(buildMetadataHeaders(metadata))
                 .build())
         inputStream.close()
-        
+
         // Логируем успешное завершение загрузки
         loggerClient.logActivity(
-          event = "File upload to MinIO completed",
-          userId = metadata.user_id,
-          additionalData = mapOf(
-            "objectName" to objectName,
-            "bucket" to bucketName
-          )
-        )
-        
+            event = "File upload to MinIO completed",
+            userId = metadata.user_id,
+            additionalData = mapOf("objectName" to objectName, "bucket" to bucketName))
+
         UploadResponse(id = objectName)
       } catch (e: Exception) {
         // Логируем ошибку при загрузке
         loggerClient.logError(
-          event = "MinIO upload error",
-          errorMessage = e.message ?: "Unknown error",
-          userId = metadata.user_id,
-          stackTrace = e.stackTraceToString(),
-          level = LogLevel.ERROR
-        )
+            event = "MinIO upload error",
+            errorMessage = e.message ?: "Unknown error",
+            userId = metadata.user_id,
+            stackTrace = e.stackTraceToString(),
+            level = LogLevel.ERROR)
         throw e
       }
     }
@@ -122,12 +116,9 @@ class FileService : IFileService {
 
         // Логируем начало обновления файла
         loggerClient.logActivity(
-          event = "Starting file update in MinIO",
-          additionalData = mapOf(
-            "objectName" to objectName,
-            "hasNewContent" to (file != null).toString()
-          )
-        )
+            event = "Starting file update in MinIO",
+            additionalData =
+                mapOf("objectName" to objectName, "hasNewContent" to (file != null).toString()))
 
         val newFileBytes: ByteArray =
             if (file == null) {
@@ -166,26 +157,24 @@ class FileService : IFileService {
                 .headers(mergedHeaders)
                 .build())
         inputStream.close()
-        
+
         // Логируем успешное обновление файла
         loggerClient.logActivity(
-          event = "File update in MinIO completed",
-          additionalData = mapOf(
-            "objectName" to objectName,
-            "bucket" to bucketName,
-            "newSize" to fixMetadata.size.toString()
-          )
-        )
-        
+            event = "File update in MinIO completed",
+            additionalData =
+                mapOf(
+                    "objectName" to objectName,
+                    "bucket" to bucketName,
+                    "newSize" to fixMetadata.size.toString()))
+
         UploadResponse(id = objectName)
       } catch (e: Exception) {
         // Логируем ошибку при обновлении
         loggerClient.logError(
-          event = "MinIO update error",
-          errorMessage = e.message ?: "Unknown error",
-          stackTrace = e.stackTraceToString(),
-          level = LogLevel.ERROR
-        )
+            event = "MinIO update error",
+            errorMessage = e.message ?: "Unknown error",
+            stackTrace = e.stackTraceToString(),
+            level = LogLevel.ERROR)
         throw e
       }
     }
@@ -205,13 +194,9 @@ class FileService : IFileService {
       try {
         // Логируем запрос на получение файла
         loggerClient.logActivity(
-          event = "Retrieving file from MinIO",
-          additionalData = mapOf(
-            "fileId" to fileId,
-            "bucket" to bucketName
-          )
-        )
-        
+            event = "Retrieving file from MinIO",
+            additionalData = mapOf("fileId" to fileId, "bucket" to bucketName))
+
         val obj =
             client.getObject(GetObjectArgs.builder().bucket(bucketName).`object`(fileId).build())
 
@@ -239,27 +224,25 @@ class FileService : IFileService {
                         ?: bytes.size.toLong(),
                 temp = headers["x-amz-meta-temp"]?.firstOrNull()?.toBoolean(),
                 folder = headers["x-amz-meta-folder"]?.firstOrNull())
-        
+
         // Логируем успешное получение файла
         loggerClient.logActivity(
-          event = "File retrieved from MinIO",
-          userId = metadata.user_id,
-          additionalData = mapOf(
-            "fileId" to fileId,
-            "fileName" to metadata.file_name,
-            "fileSize" to metadata.size.toString()
-          )
-        )
+            event = "File retrieved from MinIO",
+            userId = metadata.user_id,
+            additionalData =
+                mapOf(
+                    "fileId" to fileId,
+                    "fileName" to metadata.file_name,
+                    "fileSize" to metadata.size.toString()))
 
         Pair(metadata, bytes)
       } catch (e: Exception) {
         // Логируем ошибку при получении файла
         loggerClient.logError(
-          event = "MinIO file retrieval error",
-          errorMessage = e.message ?: "Unknown error",
-          stackTrace = e.stackTraceToString(),
-          level = LogLevel.ERROR
-        )
+            event = "MinIO file retrieval error",
+            errorMessage = e.message ?: "Unknown error",
+            stackTrace = e.stackTraceToString(),
+            level = LogLevel.ERROR)
         throw e
       }
     }
@@ -278,14 +261,9 @@ class FileService : IFileService {
       try {
         // Логируем запрос на генерацию URL
         loggerClient.logActivity(
-          event = "Generating presigned URL",
-          additionalData = mapOf(
-            "fileId" to fileId,
-            "bucket" to bucketName,
-            "expiryDays" to "7"
-          )
-        )
-        
+            event = "Generating presigned URL",
+            additionalData = mapOf("fileId" to fileId, "bucket" to bucketName, "expiryDays" to "7"))
+
         val url =
             client.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
@@ -294,24 +272,19 @@ class FileService : IFileService {
                     .`object`(fileId)
                     .expiry(7 * 24 * 60 * 60) // 7 days
                     .build())
-        
+
         // Логируем успешную генерацию URL
         loggerClient.logActivity(
-          event = "Presigned URL generated",
-          additionalData = mapOf(
-            "fileId" to fileId
-          )
-        )
-        
+            event = "Presigned URL generated", additionalData = mapOf("fileId" to fileId))
+
         GetFileUrlResponse(url = url)
       } catch (e: Exception) {
         // Логируем ошибку при генерации URL
         loggerClient.logError(
-          event = "MinIO presigned URL generation error",
-          errorMessage = e.message ?: "Unknown error",
-          stackTrace = e.stackTraceToString(),
-          level = LogLevel.ERROR
-        )
+            event = "MinIO presigned URL generation error",
+            errorMessage = e.message ?: "Unknown error",
+            stackTrace = e.stackTraceToString(),
+            level = LogLevel.ERROR)
         throw e
       }
     }
