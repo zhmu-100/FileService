@@ -1,5 +1,7 @@
 package org.fileservice
 
+import com.mad.client.LoggerClient
+import com.mad.model.LogLevel
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -7,6 +9,25 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import org.fileservice.connection.MinioConfig
 import org.fileservice.router.registerFileRoutes
+import io.github.cdimascio.dotenv.dotenv
+
+/**
+ * Глобальный клиент логирования для использования во всем приложении
+ */
+val loggerClient: LoggerClient by lazy {
+
+  val dotenv = dotenv()
+
+  val redisHost = dotenv["REDIS_HOST"] ?: "localhost"
+  val redisPort = dotenv["REDIS_PORT"]?.toIntOrNull() ?: 6379
+  val redisPassword = dotenv["REDIS_PASSWORD"] ?: ""
+  
+  LoggerClient(
+    host = redisHost,
+    port = redisPort,
+    password = redisPassword
+  )
+}
 
 /**
  * Точка входа в приложение FileService.
@@ -20,10 +41,37 @@ import org.fileservice.router.registerFileRoutes
  */
 fun main() {
   val config = MinioConfig.load()
+  
+  // Логируем запуск сервиса
+  loggerClient.logActivity(
+    event = "FileService started",
+    additionalData = mapOf(
+      "apiHost" to config.apiHost,
+      "apiPort" to config.apiPort.toString(),
+      "minioEndpoint" to config.minioEndpoint,
+      "minioBucket" to config.minioBucketName
+    )
+  )
 
-  embeddedServer(Netty, host = config.apiHost, port = config.apiPort) {
-        install(ContentNegotiation) { json() }
-        registerFileRoutes()
-      }
-      .start(wait = true)
+  try {
+    embeddedServer(Netty, host = config.apiHost, port = config.apiPort) {
+          install(ContentNegotiation) { json() }
+          registerFileRoutes()
+        }
+        .start(wait = true)
+  } catch (e: Exception) {
+    // Логируем ошибку при запуске сервиса
+    loggerClient.logError(
+      event = "FileService startup failed",
+      errorMessage = e.message ?: "Unknown error",
+      stackTrace = e.stackTraceToString()
+    )
+    throw e
+  } finally {
+    // Закрываем соединение с логгером при завершении работы
+    Runtime.getRuntime().addShutdownHook(Thread {
+      loggerClient.logActivity("FileService shutdown", level = LogLevel.INFO)
+      loggerClient.close()
+    })
+  }
 }

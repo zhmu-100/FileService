@@ -13,10 +13,12 @@ version = "1.0.0"
 
 repositories {
   mavenCentral()
+	maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
   implementation(kotlin("stdlib"))
+	implementation("com.github.poplopok:Logger:1.0.6")
 
   implementation("io.ktor:ktor-server-core-jvm:2.2.4")
   implementation("io.ktor:ktor-server-netty-jvm:2.2.4")
