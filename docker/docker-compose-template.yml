@@ -1,0 +1,72 @@
+services:
+  app:
+    image: ${REGISTRY:-localhost}/${SERVICE_NAME:-file-service}:${SERVICE_VERSION:-latest}
+    container_name: ${SERVICE_NAME:-file-service}
+    restart: always
+    environment:
+      - SERVICE_ENV=${DEPLOYMENT_ENV:-development}
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      # Additional environment variables will be loaded from env file
+    env_file:
+      - ./${SERVICE_NAME:-file-service}.env
+    ports:
+      - "${PORT:-8089}:8089"
+    volumes:
+      - app-data:/app/data
+      - app-logs:/app/logs
+      # - ./config/${DEPLOYMENT_ENV:-development}/${SERVICE_NAME:-file-service}.conf:/app/config/application.conf
+      - ./${SERVICE_NAME}.conf:/app/config/application.conf
+      - ./${SERVICE_NAME:-file-service}.env:/app/.env
+      - ./${SERVICE_NAME:-file-service}.env:/.env
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio:
+    image: minio/minio:latest
+    container_name: ${SERVICE_NAME:-file-service}-minio
+    restart: always
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-yEQiIkgvZIltX4P0ILID}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-V28Y73MJne6Mc6Ag3CoS7yMy5kCox6ejhKZKQZ28}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-test-bucket}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "${MINIO_PORT:-9020}:9020"
+      - "${MINIO_CONSOLE_PORT:-9021}:9021"
+    command: server /data --console-address ":9021"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9020/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  app-network:
+    external: true
+
+volumes:
+  app-data:
+    name: ${SERVICE_NAME:-file-service}-data-${DEPLOYMENT_ENV:-development}
+  app-logs:
+    name: ${SERVICE_NAME:-file-service}-logs-${DEPLOYMENT_ENV:-development}
+  minio-data:
+    name: ${SERVICE_NAME:-file-service}-minio-data-${DEPLOYMENT_ENV:-development}
