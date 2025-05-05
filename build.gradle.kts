@@ -92,9 +92,9 @@ application {
 }
 
 
-# tasks.check {
-#   dependsOn(tasks.named("jacocoTestCoverageVerification"))
-# }
+// tasks.check {
+//   dependsOn(tasks.named("jacocoTestCoverageVerification"))
+// }
 
 application {
   mainClass.set("org.fileservice.ApiServerKt")
