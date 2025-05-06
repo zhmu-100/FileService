@@ -10,7 +10,7 @@ services:
     env_file:
       - ./${SERVICE_NAME:-file-service}.env
     ports:
-      - "${PORT:-8089}:8089"
+      - "8089:8089"
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
@@ -21,7 +21,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8089/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -45,7 +45,7 @@ services:
     ports:
       - "${MINIO_PORT:-9020}:9020"
       - "${MINIO_CONSOLE_PORT:-9021}:9021"
-    command: server /data --console-address ":9021"
+    command: server /data --console-address ":9021" --address ":9020"
     networks:
       - app-network
     healthcheck:
